@@ -31,11 +31,6 @@ return [
 
     'connections' => [
 
-          'array' => [
-        'driver' => 'array',
-                'database' => ':memory:', // ✅ Add this line
-
-    ],
 
         'sqlite' => [
             'driver' => 'sqlite',
