@@ -1,0 +1,56 @@
+name: Laravel Production Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy-laravel:
+    name: 🚀 Laravel Production Deployment
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🗝️ Set up SSH for EC2 access
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+      - name: 🚀 Deploy Laravel on EC2
+        run: |
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
+            set -e
+
+            echo "📂 Navigating to Laravel dir..."
+            cd /var/www/laravel
+
+            echo "🔧 Preparing writable directories for composer/ubuntu..."
+            sudo mkdir -p storage/logs bootstrap/cache
+            sudo touch storage/logs/laravel.log
+            sudo chown -R ubuntu:ubuntu storage bootstrap/cache
+            sudo chmod -R 775 storage bootstrap/cache
+
+            echo "📥 Pulling latest code..."
+            git pull origin ${{ github.ref_name }}
+
+            echo "📦 Installing dependencies..."
+            composer install --no-dev --optimize-autoloader
+
+            echo "⚙️ Running Laravel post-deploy commands..."
+            php artisan migrate --force
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+
+            echo "🔒 Reverting permissions to www-data for web server..."
+            sudo chown -R www-data:www-data storage bootstrap/cache
+
+            echo "✅ Laravel deployment completed!"
+          EOF
+      - name: 🔒 Clean up SSH keys
+        run: |
+          rm -f ~/.ssh/id_rsa
+          rm -f ~/.ssh/known_hosts
+          echo "🗑️ Cleaned up SSH keys!"
