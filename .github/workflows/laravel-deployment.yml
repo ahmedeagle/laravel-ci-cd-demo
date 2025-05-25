@@ -8,7 +8,7 @@ on:
 jobs:
   deploy-laravel:
     name: 🚀 Laravel Production Deployment
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted,centeral-dev-runner]
 
     steps:
       - name: 🗝️ Set up SSH for EC2 access
